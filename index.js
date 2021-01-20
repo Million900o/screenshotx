@@ -1,52 +1,28 @@
 // Dependencies
-const { app, Menu, Tray, BrowserWindow, globalShortcut, clipboard, ipcMain, nativeImage } = require('electron');
-const { execSync } = require('child_process');
+const { app, Menu, Tray } = require('electron');
 const settings = require('electron-settings');
-const activeWin = require('active-win');
-const FormData = require('form-data');
-const fetch = require('node-fetch');
 const path = require('path');
 const fs = require('fs');
 
 // Functions
-const { notif_clip, notif_upload, notif_saved, customError } = require('./functions/notifications');
-const createFileName = require('./functions/createFileName');
+const { saveCustom, saveClipboard, saveImgur, saveLocal, savePyroCDN } = require('./functions/saveFiles');
+const { customError } = require('./functions/notifications');
+const { openSettings } = require('./functions/pages');
+const trayMenu = require('./functions/trayMenu');
 const template = require('./functions/template');
+const registerShortcuts = require('./functions/shortcuts');
 
 //variables
-let file = `${app.getPath('home')}/screenshot.png`;
 let lastFile = '';
-let settingsWin = null;
-let shortenWin = null;
 let tray = null;
 
-// Commands
-// Get tmp file path
-let temp_img_path = path.join(app.getPath('home') + '/screenshot.png');
-// Create commands as variables
-let fullscreen_cmd = 'screencapture ' + temp_img_path;
-let selection_cmd = 'screencapture -i ' + temp_img_path;
-let window_cmd = 'screencapture -l$id ' + temp_img_path;
-// Create functions for easy access
-function screenshotFullscreen() {
-  // Run fullscreen command
-  execSync(fullscreen_cmd);
-}
-function screenshotSelection() {
-  // Run selection command
-  execSync(selection_cmd);
-}
-async function screenshotWindow() {
-  // Get active window
-  let active = await activeWin();
-  // Return if no active window
-  if (!active) return customError('No active window found');
-  // Otherwise, run he command with the correct ID
-  execSync(window_cmd.replace('$id', active.id), { async: true });
-}
+// Globals
+global.file = `${app.getPath('home')}/screenshot.png`;
+global.settingsWin = null;
+global.shortenWin = null;
 
 // Ready
-app.on('ready', (event) => {
+app.on('ready', (e) => {
   // Set Settings
   if (!settings.has('config')) {
     settings.set('config', {
@@ -72,7 +48,7 @@ app.on('ready', (event) => {
   tray.setContextMenu(trayMenu(conf));
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 
-  // Shortcuts
+  // Shortcuts 
   registerShortcuts(conf);
 });
 
@@ -82,14 +58,9 @@ app.on('window-all-closed', (event) => {
   app.dock.hide();
 });
 
-// When settings update
-ipcMain.on('settings:update', async (e, item) => {
-  registerShortcuts(item);
-  settings.set('config', item);
-});
-
 // Function to watch the file
 function handleFile() {
+  // Check if it exists
   let exist = fs.existsSync(file);
   if (!exist) { return customError('The handleFile function was called, but no file exists'); }
   // Check if we already did it
@@ -99,269 +70,14 @@ function handleFile() {
 
   let conf = settings.get('config');
 
-  if (conf.save === 'clipboard') {
-    saveClipboard();
-  } else if (conf.save === 'imgur') {
-    saveImgur();
-  } else if (conf.save === "local") {
-    saveLocal();
-  } else if (conf.save === 'custom') {
-    saveCustom();
-  } else if (conf.save === 'PyroCDN') {
-    savePyroCDN();
-  } else customError(`Save method ${conf.save} is not accepted.`);
+  if (conf.save === 'clipboard') saveClipboard();
+  else if (conf.save === 'imgur') saveImgur();
+  else if (conf.save === "local") saveLocal();
+  else if (conf.save === 'custom') saveCustom();
+  else if (conf.save === 'PyroCDN') savePyroCDN();
+  else customError(`Save method ${conf.save} is not accepted.`);
 }
 
-function saveCustom() {
-  let { custom_settings } = settings.get('config');
-  fs.readFile(file, (err, data) => {
-    if (err) return customError(err.toString());
-    const formData = new FormData();
-    formData.append('file', data, createFileName(new Date()));
-    let headers = Object.assign(custom_settings['headers'], formData.getHeaders());
-    headers[custom_settings.key] = custom_settings.auth;
-    fetch(custom_settings.url, {
-      method: 'POST',
-      headers: headers,
-      body: formData
-    }).then(async (res) => {
-      const text = await res.text();
-      const rurl = custom_settings.rurl.toString();
-      if (rurl === 'response') {
-        clipboard.writeText(text);
-        notif_upload();
-      } else if (rurl.startsWith('json.')) {
-        rurl.replace('json.', '');
-        let json;
-        try {
-          json = JSON.parse(text);
-        } catch (err) {
-          return customError(err.toString());
-        }
-        const args = rurl.split('.');
-        const url = args.reduce((T, A) => (T = json[A] || '', T), null);
-        if (!url) return customError(text);
-        clipboard.writeText(url);
-        notif_upload();
-        try {
-          fs.unlinkSync(file);
-        } catch (err) {
-          return customError(err.toString());
-        }
-        return;
-      } else {
-        return customError('Response URL not acceptable');
-      }
-    }).catch(e => {
-      return customError(e.toString());
-    });
-  });
-}
-function saveClipboard() {
-  let image = nativeImage.createFromPath(file);
-  try {
-    fs.unlinkSync(file);
-  } catch (err) {
-    customError(err.toString());
-  }
-  clipboard.writeImage(image);
-  notif_clip();
-}
-function saveImgur() {
-  fs.readFile(file, (err, data) => {
-    if (err) return customError(err.toString());
-
-    const formData = new FormData();
-    formData.append('image', data, createFileName(new Date()));
-    const headers = formData.getHeaders();
-    headers['Authorization'] = 'Client-ID 6a5400948b3b376';
-    fetch('https://api.imgur.com/3/upload', {
-      method: 'POST',
-      headers: headers,
-      body: formData,
-    }).then(e => e.json())
-      .then(json => {
-        if (json.status === 200) {
-          clipboard.writeText(json.data.link);
-          notif_upload();
-        } else {
-          return customError('An unknown error has occured');
-        }
-      })
-      .catch(e => {
-        return customError(e.toString());
-      });
-  });
-}
-function saveLocal() {
-  const filename = createFileName(new Date());
-  let file_path = `${app.getPath('documents')}/screenshots/` + filename;
-  if (!fs.existsSync(`${app.getPath('documents')}/screenshots`)) {
-    fs.mkdirSync(`${app.getPath('documents')}/screenshots`);
-  }
-  try {
-    fs.renameSync(file, file_path);
-  } catch (err) {
-    customError(err.toString());
-  }
-  notif_saved();
-}
-function savePyroCDN() {
-  let conf = settings.get('config');
-  fs.readFile(file, (err, data) => {
-    if (err) return customError(err.toString());
-
-    const formData = new FormData();
-    formData.append('file', data, createFileName(new Date()));
-    let headers = formData.getHeaders();
-    headers['key'] = conf.pyrocdn.key;
-    fetch(conf['pyrocdn']['url'], {
-      method: 'POST',
-      headers: headers,
-      body: formData
-    }).then(async (res) => {
-      const text = await res.text();
-      clipboard.writeText(text);
-      notif_upload();
-    }).catch(e => {
-      return customError(e.toString());
-    });
-  });
-}
-function shortenURL(url) {
-  const { shorten } = settings.get('config');
-  const headers = JSON.parse(shorten.headers);
-  headers['Content-Type'] = 'application/json';
-  fetch(shorten.url, {
-    method: 'POST',
-    body: JSON.stringify({
-      url: url
-    }),
-    headers: headers
-  }).then(async res => {
-    const text = await res.text();
-    const rurl = shorten.rurl.toString();
-    if (rurl === 'response') {
-      clipboard.writeText(text);
-      return notif_upload();
-    } else if (rurl.startsWith('json.')) {
-      rurl.replace('json.', '');
-      let json;
-      try {
-        json = JSON.parse(text);
-      } catch (err) {
-        return customError(err.toString());
-      }
-      const args = rurl.split('.');
-      const url = args.reduce((T, A) => (T = (json[A] || {}), T), null);
-      clipboard.writeText(url);
-      return notif_upload();
-    } else {
-      return customError('Response URL not acceptable');
-    }
-  });
-}
-
-// Function to create the menu
-function trayMenu(config) {
-  return Menu.buildFromTemplate([
-    {
-      label: 'Capture Full Screen',
-      accelerator: config.c_fs,
-      click: screenshotFullscreen
-    },
-    {
-      label: 'Capture Selection',
-      accelerator: config.c_s,
-      click: screenshotSelection
-    },
-    {
-      label: 'Capture Window',
-      accelerator: config.c_w,
-      click: screenshotWindow
-    },
-    {
-      label: 'Shorten Link',
-      accelerator: config.s_u,
-      click: openShorten
-    },
-    { type: 'separator' },
-    {
-      label: 'Settings',
-      accelerator: config.o_se,
-      click: openSettings
-    },
-    { type: 'separator' },
-    {
-      label: 'Quit',
-      accelerator: 'Command+Q',
-      selector: 'terminate:'
-    }
-  ]);
-}
-
-// Open settings
-async function openSettings() {
-  if (settingsWin) return settingsWin.show();
-  settingsWin = new BrowserWindow({
-    show: false,
-    title: "ScreenShotX",
-    width: 600,
-    height: 500,
-    resizeable: false,
-    maximizable: false,
-    webPreferences: {
-      nodeIntegration: true
-    }
-  });
-  settingsWin.loadURL(`file://${__dirname}/static/settings.html`);
-
-  settingsWin.webContents.on('dom-ready', () => {
-    settingsWin.webContents.send('settings:start', settings.get('config'));
-    settingsWin.moveTop();
-    settingsWin.show();
-    app.dock.show();
-  });
-
-  settingsWin.on('closed', () => {
-    settingsWin = null;
-  });
-}
-
-// Open Shorten page
-async function openShorten() {
-  if (shortenWin) return shortenWin.show();
-  shortenWin = new BrowserWindow({
-    show: true,
-    title: 'Shorten URL',
-    width: 500,
-    height: 70,
-    maximizable: false,
-    webPreferences: {
-      nodeIntegration: true
-    }
-  });
-  shortenWin.on('closed', () => {
-    shortenWin = null;
-  });
-  shortenWin.loadURL(`file://${__dirname}/static/shorten.html`);
-  shortenWin.webContents.on('dom-ready', () => {
-    shortenWin.moveTop();
-    shortenWin.show();
-    app.dock.show();
-  });
-}
-
-ipcMain.on('shorten:shorten', (e, url) => {
-  shortenWin ? shortenWin.close() : undefined;
-  shortenURL(url);
+process.on('uncaughtException', (err) => {
+  throw err;
 });
-
-// Register shortcuts
-function registerShortcuts(conf) {
-  globalShortcut.register(conf.c_fs, screenshotFullscreen);
-  globalShortcut.register(conf.c_s, screenshotSelection);
-  globalShortcut.register(conf.c_w, screenshotWindow);
-  globalShortcut.register(conf.o_se, openSettings);
-  globalShortcut.register(conf.s_u, openShorten);
-}

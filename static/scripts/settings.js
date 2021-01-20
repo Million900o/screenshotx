@@ -1,5 +1,7 @@
 const { ipcRenderer } = require('electron');
 
+let settings;
+
 function wait(a) { return new Promise(r => setTimeout(() => r(), a)); }
 
 async function updateSettings(bool) {
@@ -42,6 +44,8 @@ async function updateSettings(bool) {
     }
   };
 
+  settings = config;
+
   ipcRenderer.send('settings:update', config);
   if (bool !== true) {
     document.getElementById('updated').innerHTML = '<div class="alert alert-success alert-dismissible"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>Updated\</div>';
@@ -76,6 +80,7 @@ document.getElementById('save-to').onchange = () => {
 ipcRenderer.on('log', (e, ...args) => console.log(...args));
 
 ipcRenderer.on('settings:start', (e, item) => {
+  settings = item;
   document.getElementById('container').style.visibility = "visible";
   document.getElementById('c_fs').value = item.c_fs;
   document.getElementById('c_s').value = item.c_s;
@@ -107,7 +112,6 @@ ipcRenderer.on('settings:start', (e, item) => {
   document.getElementById('custom_rurl').value = cs.rurl || '';
   document.getElementById('pyrocdn_auth').value = pyro.key || '';
   document.getElementById('pyrocdn_url').value = pyro.url || '';
-  console.log(item);
   document.getElementById('shorten_url').value = us.url || '';
   document.getElementById('shorten_headers').value = JSON.stringify(us.headers || {}).toString();
   document.getElementById('shorten_rurl').value = us.rurl || '';

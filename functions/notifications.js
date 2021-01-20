@@ -1,5 +1,6 @@
 const { Notification } = require('electron');
 
+// Create the notification functions
 const notif_clip = () => new Notification({ title: 'Screenshot Taken', body: 'Screenshot has been copied to your clipboard' }).show();
 const notif_upload = () => new Notification({ title: 'Screenshot Uploaded', body: 'Screenshot link has been copied to your clipboard' }).show();
 const notif_saved = () => new Notification({ title: 'Screenshot Uploaded', body: 'Screenshot has been saved to file' }).show();
