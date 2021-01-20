@@ -5,7 +5,6 @@ const settings = require('electron-settings');
 const activeWin = require('active-win');
 const FormData = require('form-data');
 const fetch = require('node-fetch');
-const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 
@@ -18,6 +17,7 @@ const template = require('./functions/template');
 let file = `${app.getPath('home')}/screenshot.png`;
 let lastFile = '';
 let settingsWin = null;
+let shortenWin = null;
 let tray = null;
 
 // Commands
@@ -54,6 +54,7 @@ app.on('ready', (event) => {
       'c_fs': 'Command+7',
       'c_s': 'Command+8',
       'c_w': 'Command+9',
+      's_u': 'Command+0',
       'o_se': 'Command+Shift+i',
     });
     openSettings();
@@ -96,7 +97,6 @@ function handleFile() {
   if (check === lastFile) return;
   else lastFile = check;
 
-  const filename = createFileName(new Date());
   let conf = settings.get('config');
 
   if (conf.save === 'clipboard') {
@@ -113,22 +113,20 @@ function handleFile() {
 }
 
 function saveCustom() {
-  let conf = settings.get('config');
+  let { custom_settings } = settings.get('config');
   fs.readFile(file, (err, data) => {
     if (err) return customError(err.toString());
     const formData = new FormData();
     formData.append('file', data, createFileName(new Date()));
-
-    let headers = Object.assign(conf['custom_settings']['headers'], formData.getHeaders());
-    headers[conf['custom_settings']['key']] = conf['custom_settings']['auth'];
-
-    fetch(conf['custom_settings']['url'], {
+    let headers = Object.assign(custom_settings['headers'], formData.getHeaders());
+    headers[custom_settings.key] = custom_settings.auth;
+    fetch(custom_settings.url, {
       method: 'POST',
       headers: headers,
       body: formData
     }).then(async (res) => {
       const text = await res.text();
-      const rurl = conf['custom_settings']['rurl'].toString();
+      const rurl = custom_settings.rurl.toString();
       if (rurl === 'response') {
         clipboard.writeText(text);
         notif_upload();
@@ -141,14 +139,16 @@ function saveCustom() {
           return customError(err.toString());
         }
         const args = rurl.split('.');
-        const url = args.reduce((T, A) => (T = (json[A] || {}), T), null);
+        const url = args.reduce((T, A) => (T = json[A] || '', T), null);
+        if (!url) return customError(text);
         clipboard.writeText(url);
         notif_upload();
         try {
           fs.unlinkSync(file);
         } catch (err) {
-          customError(err.toString());
+          return customError(err.toString());
         }
+        return;
       } else {
         return customError('Response URL not acceptable');
       }
@@ -194,6 +194,7 @@ function saveImgur() {
   });
 }
 function saveLocal() {
+  const filename = createFileName(new Date());
   let file_path = `${app.getPath('documents')}/screenshots/` + filename;
   if (!fs.existsSync(`${app.getPath('documents')}/screenshots`)) {
     fs.mkdirSync(`${app.getPath('documents')}/screenshots`);
@@ -227,6 +228,39 @@ function savePyroCDN() {
     });
   });
 }
+function shortenURL(url) {
+  const { shorten } = settings.get('config');
+  const headers = JSON.parse(shorten.headers);
+  headers['Content-Type'] = 'application/json';
+  fetch(shorten.url, {
+    method: 'POST',
+    body: JSON.stringify({
+      url: url
+    }),
+    headers: headers
+  }).then(async res => {
+    const text = await res.text();
+    const rurl = shorten.rurl.toString();
+    if (rurl === 'response') {
+      clipboard.writeText(text);
+      return notif_upload();
+    } else if (rurl.startsWith('json.')) {
+      rurl.replace('json.', '');
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (err) {
+        return customError(err.toString());
+      }
+      const args = rurl.split('.');
+      const url = args.reduce((T, A) => (T = (json[A] || {}), T), null);
+      clipboard.writeText(url);
+      return notif_upload();
+    } else {
+      return customError('Response URL not acceptable');
+    }
+  });
+}
 
 // Function to create the menu
 function trayMenu(config) {
@@ -245,6 +279,11 @@ function trayMenu(config) {
       label: 'Capture Window',
       accelerator: config.c_w,
       click: screenshotWindow
+    },
+    {
+      label: 'Shorten Link',
+      accelerator: config.s_u,
+      click: openShorten
     },
     { type: 'separator' },
     {
@@ -289,10 +328,40 @@ async function openSettings() {
   });
 }
 
+// Open Shorten page
+async function openShorten() {
+  if (shortenWin) return shortenWin.show();
+  shortenWin = new BrowserWindow({
+    show: true,
+    title: 'Shorten URL',
+    width: 500,
+    height: 70,
+    maximizable: false,
+    webPreferences: {
+      nodeIntegration: true
+    }
+  });
+  shortenWin.on('closed', () => {
+    shortenWin = null;
+  });
+  shortenWin.loadURL(`file://${__dirname}/static/shorten.html`);
+  shortenWin.webContents.on('dom-ready', () => {
+    shortenWin.moveTop();
+    shortenWin.show();
+    app.dock.show();
+  });
+}
+
+ipcMain.on('shorten:shorten', (e, url) => {
+  shortenWin ? shortenWin.close() : undefined;
+  shortenURL(url);
+});
+
 // Register shortcuts
 function registerShortcuts(conf) {
   globalShortcut.register(conf.c_fs, screenshotFullscreen);
   globalShortcut.register(conf.c_s, screenshotSelection);
   globalShortcut.register(conf.c_w, screenshotWindow);
   globalShortcut.register(conf.o_se, openSettings);
+  globalShortcut.register(conf.s_u, openShorten);
 }

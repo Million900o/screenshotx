@@ -1,0 +1,58 @@
+#shortcuts .form-group label {
+  font-size: 16px;
+  display: inline-flex;
+}
+
+#shortcuts .label {
+  display: inline;
+}
+
+#shortcuts .form-group .form-control {
+  width: 320px;
+  display: inline-flex;
+  color: #000000;
+}
+
+#shorten .form-group .form-control {
+  height: 40px;
+  width: 470px;
+  color: #000000;
+}
+
+.container {
+  visibility: hidden;
+}
+
+#custom_settings {
+  visibility: hidden;
+  display: none;
+  -webkit-animation: fadeIn 1s;
+  animation: fadeIn 1s
+}
+
+#open-con {
+  visibility: hidden;
+  display: none;
+  -webkit-animation: fadeIn 1s;
+  animation: fadeIn 1s;
+}
+
+@-webkit-keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

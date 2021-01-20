@@ -7,60 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
   <!-- CSS -->
-  <style>
-    #shortcuts .form-group label {
-      font-size: 16px;
-      display: inline-flex;
-    }
-
-    #shortcuts .label {
-      display: inline;
-    }
-
-    #shortcuts .form-group .form-control {
-      width: 320px;
-      display: inline-flex;
-      color: #000000;
-    }
-
-    .container {
-      visibility: hidden;
-    }
-
-    #custom_settings {
-      visibility: hidden;
-      display: none;
-      -webkit-animation: fadeIn 1s;
-      animation: fadeIn 1s
-    }
-
-    #open-con {
-      visibility: hidden;
-      display: none;
-      -webkit-animation: fadeIn 1s;
-      animation: fadeIn 1s;
-    }
-
-    @-webkit-keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-
-      to {
-        opacity: 1;
-      }
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-
-      to {
-        opacity: 1;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="stylesheet.css">
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
     integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -79,6 +26,8 @@
           aria-controls="nav-general" aria-selected="true">General</a>
         <a class="nav-item nav-link" id="nav-shortcuts-tab" data-toggle="tab" href="#nav-shortcuts" role="tab"
           aria-controls="nav-shortcuts" aria-selected="false">Shortcuts</a>
+        <a class="nav-item nav-link" id="nav-shortcuts-tab" data-toggle="tab" href="#nav-shortener" role="tab"
+          aria-controls="nav-shortener" aria-selected="false">Shorten</a>
       </div>
     </nav>
 
@@ -144,12 +93,35 @@
             <label for="c_w" class="label">Capture Window</label>
             <input class="form-control form-control-sm" id="c_w" placeholder="Command+9">
           </div>
+          <!-- Shorten URL -->
+          <div class="form-group">
+            <label for="o_se" class="label">Shorten URL</label>
+            <input class="form-control form-control-sm" id="s_u" placeholder="Command+0">
+          </div>
           <!-- Settings -->
           <div class="form-group">
             <label for="o_se" class="label">Open Settings</label>
             <input class="form-control form-control-sm" id="o_se" placeholder="Command+Shift+i">
           </div>
         </form>
+      </div>
+      <!-- Shortener -->
+      <div class="tab-pane fade" id="nav-shortener" role="tabpanel" aria-labelledby="nav-shortener-tab">
+        <h2>URL Shortener</h2>
+        <div id="shorten_settings">
+          <div class="form-group">
+            <label for="shorten_url" class="label">URL</label>
+            <input class="form-control form-control-sm" id="shorten_url" placeholder="https://is-a.computer/upload">
+          </div>
+          <div class="form-group">
+            <label for="shorten_headers" class="label">Headers</label>
+            <input style="margin-top: 5px;" class="form-control form-control-sm" id="shorten_headers" placeholder="{}">
+          </div>
+          <div class="form-group">
+            <label for="shorten_rurl" class="label">Response</label>
+            <input class="form-control form-control-sm" id="shorten_rurl" placeholder="url">
+          </div>
+        </div>
       </div>
       <!-- Updated -->
       <div id="updated"></div>
