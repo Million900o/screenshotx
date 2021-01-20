@@ -1,6 +1,6 @@
-const { app } = require("electron");
+const { app } = require('electron')
 
-//menu
+// menu
 const template = [
   {
     label: 'Edit',
@@ -37,7 +37,7 @@ const template = [
       { role: 'close' }
     ]
   }
-];
+]
 
 if (process.platform === 'darwin') {
   template.unshift({
@@ -53,7 +53,7 @@ if (process.platform === 'darwin') {
       { type: 'separator' },
       { role: 'quit' }
     ]
-  });
+  })
 
   // Edit menu
   template[1].submenu.push(
@@ -65,7 +65,7 @@ if (process.platform === 'darwin') {
         { role: 'stopspeaking' }
       ]
     }
-  );
+  )
 
   // Window menu
   template[3].submenu = [
@@ -74,7 +74,7 @@ if (process.platform === 'darwin') {
     { role: 'zoom' },
     { type: 'separator' },
     { role: 'front' }
-  ];
+  ]
 }
 
-module.exports = template;
+module.exports = template

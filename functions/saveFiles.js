@@ -1,133 +1,132 @@
 
-const fs = require('fs');
+const fs = require('fs')
 
-const { clipboard, nativeImage } = require('electron');
-const settings = require('electron-settings');
-const FormData = require('form-data');
-const fetch = require('node-fetch');
+const { app, clipboard, nativeImage } = require('electron')
+const settings = require('electron-settings')
+const FormData = require('form-data')
+const fetch = require('node-fetch')
 
-const { notif_upload, customError, notif_clip } = require('./notifications');
-const createFileName = require('./createFileName');
+const { notifUpload, customError, notifClip, notifSaved } = require('./notifications')
+const createFileName = require('./createFileName')
 
-function saveCustom() {
-  let { custom_settings } = settings.get('config');
+function saveCustom () {
+  const { customSettings } = settings.get('config')
   fs.readFile(file, (err, data) => {
-    if (err) return customError(err.toString());
-    const formData = new FormData();
-    formData.append('file', data, createFileName(new Date()));
-    let headers = Object.assign(custom_settings['headers'], formData.getHeaders());
-    headers[custom_settings.key] = custom_settings.auth;
-    fetch(custom_settings.url, {
+    if (err) return customError(err.toString())
+    const formData = new FormData()
+    formData.append('file', data, createFileName(new Date()))
+    const headers = Object.assign(customSettings.headers, formData.getHeaders())
+    headers[customSettings.key] = customSettings.auth
+    fetch(customSettings.url, {
       method: 'POST',
       headers: headers,
       body: formData
     }).then(async (res) => {
-      const text = await res.text();
-      const rurl = custom_settings.rurl.toString();
+      const text = await res.text()
+      const rurl = customSettings.rurl.toString()
       if (rurl === 'response') {
-        clipboard.writeText(text);
-        notif_upload();
+        clipboard.writeText(text)
+        notifUpload()
       } else if (rurl.startsWith('json.')) {
-        rurl.replace('json.', '');
-        let json;
+        rurl.replace('json.', '')
+        let json
         try {
-          json = JSON.parse(text);
+          json = JSON.parse(text)
         } catch (err) {
-          return customError(err.toString());
+          return customError(err.toString())
         }
-        const args = rurl.split('.');
-        const url = args.reduce((T, A) => (T = json[A] || '', T), null);
-        if (!url) return customError(text);
-        clipboard.writeText(url);
-        notif_upload();
+        const url = rurl.split('.').reduce((T, A) => json[A] || '', null)
+        if (!url) return customError(text)
+        clipboard.writeText(url)
+        notifUpload()
         try {
-          fs.unlinkSync(file);
+          if (fs.existsSync(file)) fs.unlinkSync(file)
         } catch (err) {
-          return customError(err.toString());
+          return customError(err.toString())
         }
-        return;
       } else {
-        return customError('Response URL not acceptable');
+        return customError('Response URL not acceptable')
       }
     }).catch(e => {
-      return customError(e.toString());
-    });
-  });
+      return customError(e.toString())
+    })
+  })
 }
 
-function saveClipboard() {
-  let image = nativeImage.createFromPath(file);
+function saveClipboard () {
+  const image = nativeImage.createFromPath(file)
   try {
-    fs.unlinkSync(file);
+    fs.unlinkSync(file)
   } catch (err) {
-    customError(err.toString());
+    customError(err.toString())
   }
-  clipboard.writeImage(image);
-  notif_clip();
+  clipboard.writeImage(image)
+  notifClip()
 }
 
-function saveImgur() {
+function saveImgur () {
   fs.readFile(file, (err, data) => {
-    if (err) return customError(err.toString());
+    if (err) return customError(err.toString())
 
-    const formData = new FormData();
-    formData.append('image', data, createFileName(new Date()));
-    const headers = formData.getHeaders();
-    headers['Authorization'] = 'Client-ID 6a5400948b3b376';
+    const formData = new FormData()
+    formData.append('image', data, createFileName(new Date()))
+    const headers = formData.getHeaders()
+    headers.Authorization = 'Client-ID 6a5400948b3b376'
     fetch('https://api.imgur.com/3/upload', {
       method: 'POST',
       headers: headers,
-      body: formData,
+      body: formData
     }).then(e => e.json())
       .then(json => {
         if (json.status === 200) {
-          clipboard.writeText(json.data.link);
-          notif_upload();
+          clipboard.writeText(json.data.link)
+          notifUpload()
         } else {
-          return customError('An unknown error has occured');
+          return customError('An unknown error has occured')
         }
       })
       .catch(e => {
-        return customError(e.toString());
-      });
-  });
+        return customError(e.toString())
+      })
+  })
 }
 
-function saveLocal() {
-  const filename = createFileName(new Date());
-  let file_path = `${app.getPath('documents')}/screenshots/` + filename;
+function saveLocal () {
+  const filename = createFileName(new Date())
+  const filePath = `${app.getPath('documents')}/screenshots/` + filename
   if (!fs.existsSync(`${app.getPath('documents')}/screenshots`)) {
-    fs.mkdirSync(`${app.getPath('documents')}/screenshots`);
+    fs.mkdirSync(`${app.getPath('documents')}/screenshots`)
   }
   try {
-    fs.renameSync(file, file_path);
+    fs.renameSync(file, filePath)
   } catch (err) {
-    customError(err.toString());
+    customError(err.toString())
   }
-  notif_saved();
+  notifSaved()
 }
 
-function savePyroCDN() {
-  let conf = settings.get('config');
+function savePyroCDN () {
+  // Get the configuration settings
+  const conf = settings.get('config')
+  // Read the file
   fs.readFile(file, (err, data) => {
-    if (err) return customError(err.toString());
-
-    const formData = new FormData();
-    formData.append('file', data, createFileName(new Date()));
-    let headers = formData.getHeaders();
-    headers['key'] = conf.pyrocdn.key;
-    fetch(conf['pyrocdn']['url'], {
+    if (err) return customError(err.toString())
+    const formData = new FormData()
+    formData.append('file', data, createFileName(new Date()))
+    const headers = formData.getHeaders()
+    headers.key = conf.pyrocdn.key
+    fetch(conf.pyrocdn.url, {
       method: 'POST',
       headers: headers,
       body: formData
     }).then(async (res) => {
-      const text = await res.text();
-      clipboard.writeText(text);
-      notif_upload();
+      const text = await res.text()
+      clipboard.writeText(text)
+      notifUpload()
     }).catch(e => {
-      return customError(e.toString());
-    });
-  });
+      return customError(e.toString())
+    })
+  })
 }
 
-module.exports = { saveCustom, saveClipboard, saveImgur, saveLocal, savePyroCDN };
+module.exports = { saveCustom, saveClipboard, saveImgur, saveLocal, savePyroCDN }

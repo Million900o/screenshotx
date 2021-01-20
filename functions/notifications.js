@@ -1,9 +1,10 @@
-const { Notification } = require('electron');
+const { Notification } = require('electron')
 
 // Create the notification functions
-const notif_clip = () => new Notification({ title: 'Screenshot Taken', body: 'Screenshot has been copied to your clipboard' }).show();
-const notif_upload = () => new Notification({ title: 'Screenshot Uploaded', body: 'Screenshot link has been copied to your clipboard' }).show();
-const notif_saved = () => new Notification({ title: 'Screenshot Uploaded', body: 'Screenshot has been saved to file' }).show();
-const customError = (t) => new Notification({ title: 'Error', body: t }).show();
+const notifClip = () => new Notification({ title: 'Screenshot Taken', body: 'Screenshot has been copied to your clipboard' }).show()
+const notifUpload = () => new Notification({ title: 'Screenshot Uploaded', body: 'Screenshot link has been copied to your clipboard' }).show()
+const notifSaved = () => new Notification({ title: 'Screenshot Uploaded', body: 'Screenshot has been saved to file' }).show()
+const notifShorten = () => new Notification({ title: 'URL Shortened', body: 'Short URL has been copied to your clipboard' }).show()
+const customError = (t) => new Notification({ title: 'Error', body: t }).show()
 
-module.exports = { notif_clip, notif_upload, notif_saved, customError };
+module.exports = { notifClip, notifUpload, notifSaved, customError, notifShorten }

@@ -1,34 +1,35 @@
-const { app } = require('electron');
-const { execSync } = require('child_process');
+const { app } = require('electron')
+const { execSync } = require('child_process')
 
-const activeWin = require('active-win');
-const path = require('path');
+const activeWin = require('active-win')
+const path = require('path')
+const { customError } = require('./notifications')
 
 // Get tmp file path
-let temp_img_path = path.join(app.getPath('home') + '/screenshot.png');
+const tempImgPath = path.join(app.getPath('home') + '/screenshot.png')
 
 // Create commands as variables
-let fullscreen_cmd = 'screencapture ' + temp_img_path;
-let selection_cmd = 'screencapture -i ' + temp_img_path;
-let window_cmd = 'screencapture -l$id ' + temp_img_path;
+const fullscreenCMD = 'screencapture ' + tempImgPath
+const selectionCMD = 'screencapture -i ' + tempImgPath
+const windowCMD = 'screencapture -l$id ' + tempImgPath
 
-function screenshotFullscreen() {
+function screenshotFullscreen () {
   // Run fullscreen command
-  execSync(fullscreen_cmd);
+  execSync(fullscreenCMD)
 }
 
-function screenshotSelection() {
+function screenshotSelection () {
   // Run selection command
-  execSync(selection_cmd);
+  execSync(selectionCMD)
 }
 
-async function screenshotWindow() {
+async function screenshotWindow () {
   // Get active window
-  let active = await activeWin();
+  const active = await activeWin()
   // Return if no active window
-  if (!active) return customError('No active window found');
+  if (!active) return customError('No active window found')
   // Otherwise, run the command with the correct ID
-  execSync(window_cmd.replace('$id', active.id), { async: true });
+  execSync(windowCMD.replace('$id', active.id), { async: true })
 }
 
-module.exports = { screenshotFullscreen, screenshotSelection, screenshotWindow };
+module.exports = { screenshotFullscreen, screenshotSelection, screenshotWindow }

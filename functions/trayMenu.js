@@ -1,7 +1,7 @@
-const { Menu } = require('electron');
-const { screenshotFullscreen, screenshotSelection, screenshotWindow } = require('./commands');
-const { openSettings, openShorten } = require('./pages');
-function trayMenu(config) {
+const { Menu } = require('electron')
+const { screenshotFullscreen, screenshotSelection, screenshotWindow } = require('./commands')
+const { openSettings, openShorten } = require('./pages')
+function trayMenu (config) {
   return Menu.buildFromTemplate([
     {
       label: 'Capture Full Screen',
@@ -35,7 +35,7 @@ function trayMenu(config) {
       accelerator: 'Command+Q',
       selector: 'terminate:'
     }
-  ]);
+  ])
 }
 
-module.exports = trayMenu;
+module.exports = trayMenu
