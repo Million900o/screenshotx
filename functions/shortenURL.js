@@ -11,6 +11,7 @@ function shortenURL (url) {
   const headers = shorten.headers
   headers['Content-Type'] = 'application/json'
   // POST to the given URL as body: { url: url }
+  if(!shorten.url) return customError('No shortener URL was provided')
   fetch(shorten.url, {
     method: 'POST',
     body: JSON.stringify({

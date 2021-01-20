@@ -17,6 +17,7 @@ function saveCustom () {
     formData.append('file', data, createFileName(new Date()))
     const headers = Object.assign(customSettings.headers, formData.getHeaders())
     headers[customSettings.key] = customSettings.auth
+    if (!customSettings.url) return customError('No custom URL was provided')
     fetch(customSettings.url, {
       method: 'POST',
       headers: headers,
