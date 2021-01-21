@@ -7,11 +7,12 @@ const { notifUpload, customError, notifShorten } = require('./notifications')
 function shortenURL (url) {
   // Get the shorten settings
   const { shorten } = settings.get('config')
+  // Notify the user if their settings are bad
+  if (!shorten.url) return customError('No shortener URL was provided')
   // Set the headers as the given headers and set content type
   const headers = shorten.headers
   headers['Content-Type'] = 'application/json'
   // POST to the given URL as body: { url: url }
-  if(!shorten.url) return customError('No shortener URL was provided')
   fetch(shorten.url, {
     method: 'POST',
     body: JSON.stringify({
