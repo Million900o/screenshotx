@@ -4,11 +4,11 @@ let settings
 
 function wait (a) { return new Promise(resolve => setTimeout(() => resolve(), a)) }
 
-async function updateSettings (bool) {
+async function updateSettings (hideUpdated) {
   let customHeaders = document.querySelector('#custom_headers').value
   if (document.getElementById('save-to').value === 'custom') {
     try {
-      customHeaders = JSON.parse(document.querySelector('#custom_headers').value)
+      customHeaders = JSON.parse(document.querySelector('#custom_headers').value || '{}')
     } catch (err) {
       document.getElementById('updated').innerHTML = '<div class="alert alert-danger alert-dismissible"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>Custom Uploader Headers input is not an object.</div>'
       return
@@ -49,7 +49,8 @@ async function updateSettings (bool) {
   settings = config
 
   ipcRenderer.send('settings:update', config)
-  if (bool !== true) {
+
+  if (hideUpdated !== true) {
     document.getElementById('updated').innerHTML = '<div class="alert alert-success alert-dismissible"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>Updated</div>'
     await wait(2600)
     document.getElementById('updated').innerHTML = ''
@@ -59,23 +60,7 @@ async function updateSettings (bool) {
 document.getElementById('update-btn').onclick = updateSettings
 
 document.getElementById('save-to').onchange = () => {
-  const val = document.getElementById('save-to').value
-  if (val === 'custom') {
-    document.getElementById('customSettings').style.visibility = 'visible'
-    document.getElementById('customSettings').style.display = 'block'
-    document.getElementById('pyrocdn_settings').style.visibility = 'hidden'
-    document.getElementById('pyrocdn_settings').style.display = 'none'
-  } else if (val === 'PyroCDN') {
-    document.getElementById('pyrocdn_settings').style.visibility = 'visible'
-    document.getElementById('pyrocdn_settings').style.display = 'block'
-    document.getElementById('customSettings').style.visibility = 'hidden'
-    document.getElementById('customSettings').style.display = 'none'
-  } else {
-    document.getElementById('pyrocdn_settings').style.visibility = 'hidden'
-    document.getElementById('pyrocdn_settings').style.display = 'none'
-    document.getElementById('customSettings').style.visibility = 'hidden'
-    document.getElementById('customSettings').style.display = 'none'
-  }
+  showPage(document.getElementById('save-to').value)
   updateSettings(true)
 }
 
@@ -92,29 +77,33 @@ ipcRenderer.on('settings:start', (e, item) => {
   $('option[value=' + item.save + ']')
     .attr('selected', true)
   const val = document.getElementById('save-to').value
-  if (val === 'custom') {
-    document.getElementById('customSettings').style.visibility = 'visible'
-    document.getElementById('customSettings').style.display = 'block'
-    document.getElementById('pyrocdn_settings').style.visibility = 'hidden'
-    document.getElementById('pyrocdn_settings').style.display = 'none'
-  } else if (val === 'PyroCDN') {
-    document.getElementById('pyrocdn_settings').style.visibility = 'visible'
-    document.getElementById('pyrocdn_settings').style.display = 'block'
-    document.getElementById('customSettings').style.visibility = 'hidden'
-    document.getElementById('customSettings').style.display = 'none'
-  } else {
-    document.getElementById('pyrocdn_settings').style.visibility = 'hidden'
-    document.getElementById('pyrocdn_settings').style.display = 'none'
-  }
+
   const cs = item.customSettings || {}
   const us = item.shorten || {}
   const pyro = item.pyrocdn || {}
+
   document.getElementById('custom_url').value = cs.url || ''
   document.getElementById('custom_headers').value = JSON.stringify(cs.headers || {}).toString()
   document.getElementById('custom_rurl').value = cs.rurl || ''
+
   document.getElementById('pyrocdn_auth').value = pyro.key || ''
   document.getElementById('pyrocdn_url').value = pyro.url || ''
+
   document.getElementById('shorten_url').value = us.url || ''
   document.getElementById('shorten_headers').value = JSON.stringify(us.headers || {}).toString()
   document.getElementById('shorten_rurl').value = us.rurl || ''
+
+  showPage(val)
 })
+
+function showPage (val) {
+  if (val === 'custom') {
+    document.getElementById('customSettings').style.visibility = 'visible'
+    document.getElementById('customSettings').style.display = 'block'
+    document.getElementById('pyrocdn_settings').style.display = 'none'
+  } else document.getElementById('customSettings').style.display = 'none'
+  if (val === 'PyroCDN') {
+    document.getElementById('pyrocdn_settings').style.visibility = 'visible'
+    document.getElementById('pyrocdn_settings').style.display = 'block'
+  } else document.getElementById('pyrocdn_settings').style.display = 'none'
+}
